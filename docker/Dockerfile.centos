@@ -1,0 +1,60 @@
+
+FROM centos:7
+
+# install build tools
+RUN yum -v -y update -d 10 && yum groupinstall -y "Development Tools"
+
+# update ca certs
+RUN yum install -y ca-certificates && update-ca-trust force-enable
+COPY cspca.crt /etc/pki/ca-trust/source/anchors/
+ENV GIT_SSL_CAINFO=/etc/pki/ca-trust/source/anchors/cspca.crt
+RUN update-ca-trust extract
+RUN git config --global http.sslCAPath /etc/pki/tls/certs
+
+# install epel repo which provides:
+# - qd-devel
+ENV EPEL_RPM epel-release-latest-7.noarch.rpm
+RUN yum install -y wget
+RUN wget https://dl.fedoraproject.org/pub/epel/${EPEL_RPM} && \
+    rpm -ivh ${EPEL_RPM}
+
+# install Element direct dependencies
+RUN yum -v -y update && yum install -y \
+    cmake3 \
+    openmpi-devel \
+    gcc-gfortran \
+    valgrind \
+    blas64-devel \
+    gmp-devel \
+    mpfr-devel \
+    libmpc-devel \
+    qd-devel
+
+# build and install Elemental
+RUN /bin/bash -i -c "cd /usr/local/src && \
+    module load mpi/openmpi-x86_64 && \
+    git clone git://github.com/elemental/Elemental.git && \
+    cd Elemental && \
+    git checkout -b test 4534badb1e7e3635bb2e57321732bd9cfc8c24b5 && \
+    mkdir build && \
+    cd build && \
+    cmake3 -DGFORTRAN_LIB=`gfortran -print-file-name=libgfortran.so` .. && \
+    make -j8 install && \
+    mkdir -p /usr/local/CMake && \
+    cp /usr/local/src/Elemental/build/ElementalTargets.cmake /usr/local/CMake/"
+
+# install LBANN dependencies
+RUN yum -v -y update && yum install -y \
+    opencv-devel \
+    doxygen
+
+# build and install LBANN
+RUN /bin/bash -i -c "cd /usr/local/src && \
+    module load mpi/openmpi-x86_64 && \
+    git clone https://github.com/Jmast/lbann.git && \
+    cd lbann && \
+    mkdir -p build && \
+    cd build && \
+    cmake3 -DCMAKE_CXX_FLAGS_RELEASE='-DEL_NEW_MPI_REQUEST -fpic' -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j8"
+

@@ -34,7 +34,7 @@ RUN cd /usr/local/src && \
     mkdir -p /usr/local/CMake && \
     cp /usr/local/src/Elemental/build/ElementalTargets.cmake /usr/local/CMake/
 
-# LBANN dependencies
+# install LBANN dependencies
 RUN apt update && apt install -y \
     software-properties-common
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys BF4CAA63
