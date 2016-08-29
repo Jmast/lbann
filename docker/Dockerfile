@@ -1,0 +1,52 @@
+FROM ubuntu:16.04
+
+# Install build and Element direct dependencies
+RUN apt update && apt install -y \
+    ca-certificates \
+    build-essential \
+    git \
+    cmake \
+    libopenmpi-dev \
+    openmpi-bin \
+    gfortran \
+    valgrind \
+    libopenblas-dev \
+    libgmp-dev \
+    libmpfr-dev \
+    libmpc-dev \
+    libqd-dev
+
+# setup certificates
+COPY cspca.crt /cspca.crt
+COPY cspca.crt /etc/ssl/certs/
+RUN update-ca-certificates
+#COPY pip.conf /etc/pip.conf
+
+# build and install Elemental
+RUN cd /usr/local/src && \
+    git clone git://github.com/elemental/Elemental.git && \
+    cd Elemental && \
+    git checkout -b test 4534badb1e7e3635bb2e57321732bd9cfc8c24b5 && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j8 install && \
+    mkdir -p /usr/local/CMake && \
+    cp /usr/local/src/Elemental/build/ElementalTargets.cmake /usr/local/CMake/
+
+# LBANN dependencies
+RUN apt update && apt install -y \
+    software-properties-common
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys BF4CAA63
+RUN add-apt-repository --yes http://ppa.launchpad.net/xqms/opencv-nonfree/ubuntu
+RUN apt update && apt install -y \
+    libopencv-dev \
+    libopencv-nonfree-dev \
+    doxygen
+
+# build and install LBANN
+RUN cd /usr/local/src && \
+    git clone https://github.com/Jmast/lbann.git && \
+    cd lbann/build && \
+    cmake -DCMAKE_CXX_FLAGS_RELEASE="-DEL_NEW_MPI_REQUEST -fpic" -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j8
