@@ -215,6 +215,9 @@ void lbann::lbann_comm::setup_node_comm() {
   std::string node_string = "hXFgQFNrqyL1mIsq";
   node_string += node_name;
   int hash = std::hash<std::string>()(node_string);
+  if (hash < 0) {
+    hash = -hash;
+  }
   mpi::Comm hash_comm;
   mpi::Split(mpi::COMM_WORLD, hash, mpi::Rank(mpi::COMM_WORLD), hash_comm);
 
